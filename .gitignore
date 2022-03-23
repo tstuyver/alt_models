@@ -1,4 +1,6 @@
 __pycache__/
 output/
 data_files/
-
+.DS_Store
+output_strained_data.log
+cycloadd_random_forest/
