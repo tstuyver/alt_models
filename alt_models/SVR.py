@@ -14,13 +14,13 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 from rdkit.Chem import AllChem
 
 
-def SVR_fp_selective(csv_file1, csv_file2, logger):
+def SVR_fp_selective(csv_file1, csv_file2, logger, rad=2, nbits=1024):
     df1 = pd.read_csv(csv_file1)
     df2 = pd.read_csv(csv_file2)
     df1['fingerprints_reactants'] = df1['smiles'].apply(lambda x: 
-            AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(x.split('>')[0]), radius=2, nBits=1024))
+            AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(x.split('>')[0]), radius=rad, nBits=nbits))
     df2['fingerprints_reactants'] = df2['smiles'].apply(lambda x: 
-            AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(x.split('>')[0]), radius=2, nBits=1024))
+            AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(x.split('>')[0]), radius=rad, nBits=nbits))
     fps1, fps2 = [], []
 
     for fp in df1['fingerprints_reactants'].values.tolist():
@@ -29,13 +29,13 @@ def SVR_fp_selective(csv_file1, csv_file2, logger):
     for fp in df2['fingerprints_reactants'].values.tolist():
         fps2.append(fp)
 
-    parameters = {'kernel': ('linear', 'rbf','poly'), 'C':[1.5, 10],'gamma': [1e-7, 1e-4],'epsilon':[0.1,0.2,0.5,0.3]}
+    parameters = {'kernel': ('linear', 'rbf','poly'), 'C':np.linspace(1.0, 10.0, 4),'gamma': [1e-7, 1e-4],'epsilon':np.linspace(0.1, 0.7, 4)}
     svr = SVR()
     reg = GridSearchCV(svr, parameters)
 
     reg.fit(fps1, df1['DG_TS'])
 
-    logger.info('Best parameters',reg.best_params_)
+    logger.info(f'Best parameters: {reg.best_params_}')
 
     y_pred = reg.predict(fps2)
 
@@ -46,23 +46,23 @@ def SVR_fp_selective(csv_file1, csv_file2, logger):
     logger.info(f'RMSE = {rmse}')
 
 
-def SVR_fp(csv_file1, logger, n_train=0.8):
+def SVR_fp(csv_file1, logger, n_train=0.8, rad=2, nbits=1024):
     df = pd.read_csv(csv_file1)
     df['fingerprints_reactants'] = df['smiles'].apply(lambda x: 
-            AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(x.split('>')[0]), radius=2, nBits=1024))
+            AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(x.split('>')[0]), radius=rad, nBits=nbits))
     fps = []
 
     for fp in df['fingerprints_reactants'].values.tolist():
         fps.append(fp)
     X_train, X_test, y_train, y_test = train_test_split(fps, df['DG_TS'], train_size=n_train)
 
-    parameters = {'kernel': ('linear', 'rbf','poly'), 'C':[1.5, 10],'gamma': [1e-7, 1e-4],'epsilon':[0.1,0.2,0.5,0.3]}
+    parameters = {'kernel': ('linear', 'rbf', 'poly'), 'C':np.linspace(1.0, 10.0, 4),'gamma': [1e-7, 1e-4],'epsilon':np.linspace(0.1, 0.7, 4)}
     svr = SVR()
     reg = GridSearchCV(svr, parameters)
 
     reg.fit(X_train, y_train)
 
-    logger.info('Best parameters',reg.best_params_)
+    logger.info(f'Best parameters: {reg.best_params_}')
 
     y_pred = reg.predict(X_test)
 
@@ -80,7 +80,7 @@ def SVR_descs_selective(pkl_file1, pkl_file2, logger):
     X_train, y_train = df1.loc[:, df1.columns != 'DG_TS'], df1[['DG_TS']]
     X_test, y_test = df2.loc[:, df2.columns != 'DG_TS'], df2[['DG_TS']]
 
-    parameters = {'kernel': ('linear', 'rbf','poly'), 'C':[1.5, 10],'gamma': [1e-7, 1e-4],'epsilon':[0.1,0.2,0.5,0.3]}
+    parameters = {'kernel': ('linear', 'rbf', 'poly'), 'C':np.linspace(1.0, 10.0, 4),'gamma': [1e-7, 1e-4],'epsilon':np.linspace(0.1, 0.7, 4)}
     svr = SVR()
     reg = GridSearchCV(svr, parameters)
 
@@ -102,7 +102,7 @@ def SVR_descs(pkl_file, logger, n_train=0.8):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=n_train)
 
-    parameters = {'kernel': ('linear', 'rbf','poly'), 'C':[1.5, 10],'gamma': [1e-7, 1e-4],'epsilon':[0.1,0.2,0.5,0.3]}
+    parameters = {'kernel': ('linear', 'rbf','poly'), 'C':np.linspace(1.0, 10.0, 4),'gamma': [1e-7, 1e-4],'epsilon':np.linspace(0.1, 0.7, 4)}
     svr = SVR()
     reg = GridSearchCV(svr, parameters)
 

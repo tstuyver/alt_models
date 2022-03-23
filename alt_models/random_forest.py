@@ -14,13 +14,13 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 from rdkit.Chem import AllChem
 
 
-def random_forest_fp_selective(csv_file1, csv_file2, logger):
+def random_forest_fp_selective(csv_file1, csv_file2, logger, rad=2, nbits=1024):
     df1 = pd.read_csv(csv_file1)
     df2 = pd.read_csv(csv_file2)
     df1['fingerprints_reactants'] = df1['smiles'].apply(lambda x: 
-            AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(x.split('>')[0]), radius=2, nBits=1024))
+            AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(x.split('>')[0]), radius=rad, nBits=nbits))
     df2['fingerprints_reactants'] = df2['smiles'].apply(lambda x: 
-            AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(x.split('>')[0]), radius=2, nBits=1024))
+            AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(x.split('>')[0]), radius=rad, nBits=nbits))
     fps1, fps2 = [], []
 
     for fp in df1['fingerprints_reactants'].values.tolist():
@@ -30,7 +30,7 @@ def random_forest_fp_selective(csv_file1, csv_file2, logger):
         fps2.append(fp)
 
     reg = GridSearchCV(RandomForestRegressor(), cv=8, param_grid={
-        "n_estimators": np.linspace(50, 250, 5).astype('int'), "max_features": np.linspace(0.2, 1.0, 4)},
+        "n_estimators": np.linspace(10, 250, 6).astype('int'), "max_features": np.linspace(0.2, 1.0, 5)},
         scoring='neg_mean_absolute_error', n_jobs=-1)
 
     reg.fit(fps1, df1['DG_TS'])
@@ -46,10 +46,10 @@ def random_forest_fp_selective(csv_file1, csv_file2, logger):
     logger.info(f'RMSE = {rmse}')
 
 
-def random_forest_fp(csv_file1, logger, n_train=0.8):
+def random_forest_fp(csv_file1, logger, n_train=0.8, rad=2, nbits=1024):
     df = pd.read_csv(csv_file1)
     df['fingerprints_reactants'] = df['smiles'].apply(lambda x: 
-            AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(x.split('>')[0]), radius=2, nBits=1024))
+            AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(x.split('>')[0]), radius=rad, nBits=nbits))
     fps = []
 
     for fp in df['fingerprints_reactants'].values.tolist():
@@ -57,7 +57,7 @@ def random_forest_fp(csv_file1, logger, n_train=0.8):
     X_train, X_test, y_train, y_test = train_test_split(fps, df['DG_TS'], train_size=n_train)
 
     reg = GridSearchCV(RandomForestRegressor(), cv=8, param_grid={
-        "n_estimators": np.linspace(50, 250, 5).astype('int'), "max_features": np.linspace(0.2, 1.0, 4)},
+        "n_estimators": np.linspace(50, 250, 6).astype('int'), "max_features": np.linspace(0.2, 1.0, 5)},
         scoring='neg_mean_absolute_error', n_jobs=-1)
 
     reg.fit(X_train, y_train)
@@ -81,7 +81,7 @@ def random_forest_descs_selective(pkl_file1, pkl_file2, logger):
     X_test, y_test = df2.loc[:, df2.columns != 'DG_TS'], df2[['DG_TS']]
 
     reg = GridSearchCV(RandomForestRegressor(), cv=8, param_grid={
-        'n_estimators': np.linspace(50, 250, 5).astype('int'), 'max_features': np.linspace(0.2, 1.0, 4)},
+        'n_estimators': np.linspace(10, 250, 6).astype('int'), 'max_features': np.linspace(0.2, 1.0, 5)},
         scoring='neg_mean_absolute_error', n_jobs=-1)
 
     reg.fit(X_train, y_train.values.ravel())
@@ -103,7 +103,7 @@ def random_forest_descs(pkl_file, logger, n_train=0.8):
     X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=n_train)
 
     reg = GridSearchCV(RandomForestRegressor(), cv=8, param_grid={
-        'n_estimators': np.linspace(50, 250, 5).astype('int'), 'max_features': np.linspace(0.2, 1.0, 4)},
+        'n_estimators': np.linspace(10, 250, 6).astype('int'), 'max_features': np.linspace(0.2, 1.0, 5)},
         scoring='neg_mean_absolute_error', n_jobs=-1)
 
     reg.fit(X_train, y_train.values.ravel())
