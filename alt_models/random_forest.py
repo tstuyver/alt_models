@@ -2,7 +2,7 @@ from collections import defaultdict
 from tkinter import W
 from rdkit.Chem import rdMolDescriptors
 from rdkit import Chem
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, cross_val_score
 from sklearn.model_selection import train_test_split
 
 import matplotlib.pyplot as plt
@@ -12,7 +12,10 @@ from sklearn.ensemble import RandomForestRegressor
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from rdkit.Chem import AllChem
+from functools import partial
+from types import SimpleNamespace
 
+from hyperopt import fmin, hp, tpe, Trials
 
 def random_forest_fp_selective(csv_file1, csv_file2, logger, rad=2, nbits=1024):
     df1 = pd.read_csv(csv_file1)
@@ -116,3 +119,81 @@ def random_forest_descs(pkl_file, logger, n_train=0.8):
 
     logger.info(f'MAE = {mae}')
     logger.info(f'RMSE = {rmse}')
+
+
+def objective(args0, data, targets):
+
+    args = SimpleNamespace(**args0)
+
+    estimator = RandomForestRegressor(n_estimators=int(args.n_estimators), 
+                                    max_features=args.max_features,
+                                    random_state=2)
+
+    cval = cross_val_score(estimator, data, targets, scoring='neg_root_mean_squared_error', cv=4)
+
+    return (cval.mean() * (-1))
+
+
+def random_forest_descs_bayesian(pkl_file, logger, n_train=0.8):
+    df = pd.read_pickle(pkl_file) 
+    X, y = df.loc[:, df.columns != 'DG_TS'], df[['DG_TS']]
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=n_train)
+
+    space = {
+        'n_estimators': hp.quniform('n_estimators', low=1, high=300, q=1),
+        'max_features': hp.quniform('max_features', low=0.1, high=1, q=0.1)
+    }
+
+    fmin_objective = partial(objective, data=X_train, targets=y_train.values.ravel())    
+
+    best = fmin(fmin_objective, space, algo=tpe.suggest, max_evals=32)
+
+    logger.info(f"optimal parameters: {best}")
+
+    model = RandomForestRegressor(n_estimators=int(best['n_estimators']), max_features=best['max_features'])
+
+    model.fit(X_train, y_train.values.ravel())
+
+    X_test['predicted'] = df.apply(lambda x: model.predict(np.array(x[df.columns != 'DG_TS']).reshape(1,-1)),axis=1)
+
+    mae = mean_absolute_error(X_test['predicted'], y_test['DG_TS'])
+    rmse = np.sqrt(mean_squared_error(X_test['predicted'], y_test['DG_TS']))
+
+    logger.info(f'MAE = {mae}')
+    logger.info(f'RMSE = {rmse}')
+
+
+def random_forest_fp_bayesian(csv_file1, logger, n_train=0.8, rad=2, nbits=1024):
+    df = pd.read_csv(csv_file1)
+    df['fingerprints_reactants'] = df['smiles'].apply(lambda x: 
+            AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(x.split('>')[0]), radius=rad, nBits=nbits))
+    fps = []
+
+    for fp in df['fingerprints_reactants'].values.tolist():
+        fps.append(fp)
+    X_train, X_test, y_train, y_test = train_test_split(fps, df['DG_TS'], train_size=n_train)
+
+    space = {
+        'n_estimators': hp.quniform('n_estimators', low=1, high=300, q=1),
+        'max_features': hp.quniform('max_features', low=0.1, high=1, q=0.1)
+    }
+
+    fmin_objective = partial(objective, data=X_train, targets=y_train.values.ravel())    
+
+    best = fmin(fmin_objective, space, algo=tpe.suggest, max_evals=32)
+
+    logger.info(f"optimal parameters: {best}")
+
+    model = RandomForestRegressor(n_estimators=int(best['n_estimators']), max_features=best['max_features'])
+
+    model.fit(X_train, y_train.values.ravel())
+
+    X_test['predicted'] = df.apply(lambda x: model.predict(np.array(x[df.columns != 'DG_TS']).reshape(1,-1)),axis=1)
+
+    mae = mean_absolute_error(X_test['predicted'], y_test['DG_TS'])
+    rmse = np.sqrt(mean_squared_error(X_test['predicted'], y_test['DG_TS']))
+
+    logger.info(f'MAE = {mae}')
+    logger.info(f'RMSE = {rmse}')
+

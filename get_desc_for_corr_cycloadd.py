@@ -99,7 +99,10 @@ if __name__ == '__main__':
     print(len(reaction_feature_list[1]), len(columns_list))
 
     df = pd.DataFrame(reaction_feature_list, columns=columns_list)
+    #df.dropna(inplace=True)
+    #df.drop_duplicates(subset=['smiles'], inplace=True)
 
     print(df.head())
 
-    df.to_pickle('input_alt_models.pkl')
+    df.to_pickle('input_alt_models_all.pkl')
+    df.to_csv('input_alt_models_all.csv')
