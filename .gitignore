@@ -4,3 +4,6 @@ data_files/
 .DS_Store
 output_strained_data.log
 cycloadd_random_forest/
+output_all_data.log
+test.png
+atom_desc_scaled.csv
