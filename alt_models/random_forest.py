@@ -189,10 +189,10 @@ def random_forest_fp_bayesian(csv_file1, logger, n_train=0.8, rad=2, nbits=1024)
 
     model.fit(X_train, y_train.values.ravel())
 
-    X_test['predicted'] = df.apply(lambda x: model.predict(np.array(x[df.columns != 'DG_TS']).reshape(1,-1)),axis=1)
+    y_pred = model.predict(X_test)
 
-    mae = mean_absolute_error(X_test['predicted'], y_test['DG_TS'])
-    rmse = np.sqrt(mean_squared_error(X_test['predicted'], y_test['DG_TS']))
+    mae = mean_absolute_error(y_test, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred)) 
 
     logger.info(f'MAE = {mae}')
     logger.info(f'RMSE = {rmse}')
