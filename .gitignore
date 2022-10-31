@@ -7,3 +7,5 @@ cycloadd_random_forest/
 output_all_data.log
 test.png
 atom_desc_scaled.csv
+old/
+output_final.log

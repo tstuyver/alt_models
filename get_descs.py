@@ -1,20 +1,16 @@
-import re
-from tkinter import W
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import rdkit.Chem as Chem
-import mol_graph_cycloadd
+from lib import get_descs_core
 from argparse import ArgumentParser
-from scaling import min_max_normalize, min_max_normalize_reaction,reaction_to_reactants,scale_targets
 
 
 parser = ArgumentParser()
-parser.add_argument('--csv_file', type=str, required=True,
+parser.add_argument('--csv-file', type=str, required=True,
                     help='path to file containing the rxn-smiles and targets')
-parser.add_argument('--atom_descs_file', type=str, required=True,
+parser.add_argument('--atom-descs-file', type=str, required=True,
                     help='path to .pkl-file containing atom descriptors')
-parser.add_argument('--reaction_descs_file', type=str, required=True,
+parser.add_argument('--reaction-descs-file', type=str, required=True,
                     help='path to .pkl-file containing reaction descriptors')                    
 
 
@@ -56,53 +52,47 @@ def get_aromatic_list(smiles):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    targets = pd.read_csv(args.csv_file)[['smiles','DG_TS']]
+    targets = pd.read_csv(args.csv_file)[['smiles','DG_TS','G_r']]
     descriptors = pd.read_pickle(args.atom_descs_file)
-    reactants = reaction_to_reactants(descriptors['smiles'].tolist())
-    descriptors,_ = min_max_normalize(descriptors.copy(), train_smiles=reactants)
-    descriptors.to_csv('atom_desc_scaled.csv')
+    descriptors = descriptors.set_index('smiles')
     mol_descs = pd.read_pickle(args.reaction_descs_file)
-    #mol_descs,_ = min_max_normalize_reaction(mol_descs.copy(), train_smiles=targets['smiles'])
-    #mol_descs.to_csv('reaction_desc_scaled.csv')
 
     reactions = pd.merge(mol_descs, targets, on='smiles')
     reactions['reactants'] = reactions['smiles'].apply(lambda x: x.split('>')[0])
     reactions['products'] = reactions['smiles'].apply(lambda x: x.split('>')[-1])
 
-    #reactions = reactions[['reactants', 'products']]
-    #descriptors = descriptors.set_index('smiles')
-    reactions['desc_core'] = reactions.apply(lambda x: mol_graph_cycloadd.smiles2graph_pr(descriptors, x['reactants'], x['products']), axis=1)
+    reactions['desc_core'] = reactions.apply(lambda x: get_descs_core(descriptors, x['reactants'], x['products']), axis=1)
 
-    reactions = reactions[reactions['desc_core'] != 'lol']
+    reactions = reactions[reactions['desc_core'] != None]
 
     reaction_feature_list = []
 
+    tmp_list_smiles = reactions['smiles'].values.tolist()
     tmp_list = reactions['desc_core'].values.tolist()
-    tmp_list_Er = reactions['E_r'].values.tolist()
     tmp_list_G = reactions['G'].values.tolist()
     tmp_list_G_alt1 = reactions['G_alt1'].values.tolist()
     tmp_list_G_alt2 = reactions['G_alt2'].values.tolist()
-    tmp_list_target = reactions['DG_TS'].values.tolist() 
+    tmp_list_target1 = reactions['DG_TS'].values.tolist() 
+    tmp_list_target2 = reactions['G_r'].values.tolist()
 
     for idx, reaction in enumerate(tmp_list):
-        rxn_desc_array = np.array([tmp_list_Er[idx], tmp_list_G[idx], tmp_list_G_alt1[idx], tmp_list_G_alt2[idx], tmp_list_target[idx]])
+        rxn_desc_array = np.array([tmp_list_G[idx], tmp_list_G_alt1[idx], tmp_list_G_alt2[idx], tmp_list_target1[idx], tmp_list_target2[idx]])
         reaction_feature_list.append(np.concatenate((np.concatenate([arr[:-1] for arr in reaction[0]]), rxn_desc_array)))
     
     columns_list = []
 
     for i in range(1,6):
-        for desc_name in ['partial_charge', 'fukui_elec', 'fukui_neu', 'nmr', 'spin_dens_triplet', 'sasa', 'pint']:
+        for desc_name in ['partial_charge', 'fukui_elec', 'fukui_neu', 'nmr']:
             columns_list.append(f'{desc_name}_{i}') 
 
-    columns_list += ['E_r', 'G', 'G_alt1', 'G_alt2', 'DG_TS']
+    columns_list += ['G', 'G_alt1', 'G_alt2', 'DG_TS', 'G_r']
 
     print(len(reaction_feature_list[1]), len(columns_list))
 
     df = pd.DataFrame(reaction_feature_list, columns=columns_list)
-    #df.dropna(inplace=True)
-    #df.drop_duplicates(subset=['smiles'], inplace=True)
+    df.dropna(inplace=True)
 
     print(df.head())
 
-    df.to_pickle('input_alt_models_all.pkl')
-    df.to_csv('input_alt_models_all.csv')
+    df.to_pickle('input_alt_models.pkl')
+    df.to_csv('input_alt_models.csv')
