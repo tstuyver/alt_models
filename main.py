@@ -1,35 +1,58 @@
 import pandas as pd
-from sklearn.linear_model import LinearRegression
-from hyperopt import hp
-from lib import get_rmse_linear_regression, get_rmse_xgboost_descriptors, get_rmse_xgboost_fp
-from lib import get_rmse_random_forest_descriptors, get_rmse_random_forest_fp, get_rmse_knn_fp
+from lib import get_cross_val_accuracy_linear_regression
+from lib import get_optimal_parameters_xgboost_descriptors, get_cross_val_accuracy_xgboost_descriptors
+from lib import get_optimal_parameters_xgboost_fp, get_cross_val_accuracy_xgboost_fp
+from lib import get_optimal_parameters_rf_fp, get_cross_val_accuracy_rf_fp
+from lib import get_optimal_parameters_rf_descriptors, get_cross_val_accuracy_rf_descriptors
+from lib import get_optimal_parameters_knn_fp, get_cross_val_accuracy_knn_fp
 from lib import create_logger
 from lib import get_df_fingerprints, get_df_fingerprints_rp
+from argparse import ArgumentParser
+
+
+parser = ArgumentParser()
+parser.add_argument('--csv-file', type=str, default='data_files/input_alt_models.pkl',
+                    help='path to file containing the rxn-smiles')
+parser.add_argument('--input-file', type=str, default='data_files/final_data.csv',
+                    help='path to the input file')
+parser.add_argument('--split_dir', type=str, default='data_files/splits',
+                    help='path to the folder containing the requested splits for the cross validation')
+parser.add_argument('--n-fold', type=int, default=10,
+                    help='the number of folds to use during cross validation')       
 
 
 if __name__ == '__main__':
     # set up
-    logger = create_logger('final')
-    df = pd.read_pickle('data_files/input_alt_models.pkl')
-    df_rxn_smiles = pd.read_csv('data_files/final_data.csv')
-    #df_fp = get_df_fingerprints(df_rxn_smiles,2,2048)
-    n_fold = 10
+    args = parser.parse_args()
+    logger = create_logger(args.input_file.split('/')[-1].split('_')[0])
+    df = pd.read_pickle(args.csv_file)
+    df_rxn_smiles = pd.read_csv(args.input_file)
+    n_fold = args.n_fold
+    split_dir = args.split_dir
+
+    df_fp = get_df_fingerprints(df_rxn_smiles,2,2048)
+    df_fp_knn = get_df_fingerprints_rp(df_rxn_smiles,2,2048)
 
     # linear regression
-    get_rmse_linear_regression(df, logger, n_fold)
+    #get_cross_val_accuracy_linear_regression(df, logger, n_fold, split_dir)
 
     # KNN - fingerprints
-    #df_fp = get_df_fingerprints_rp(df_rxn_smiles,2,2048)
-    #get_rmse_knn_fp(df_fp, logger, n_fold)
-
-    # random_forest - fingerprints
-    #get_rmse_random_forest_fp(df_fp, logger, n_fold)
+    #optimal_parameters_knn = get_optimal_parameters_knn_fp(df_fp_knn, logger)
+    optimal_parameters_knn = {'lam': 0.4, 'mu': 0.1, 'n': 4.0}
+    get_cross_val_accuracy_knn_fp(df_fp_knn, logger, 10, optimal_parameters_knn, split_dir)
 
     # random forest - descriptors
-    #get_rmse_random_forest_descriptors(df, logger, n_fold)
+    optimal_parameters_rf_descs = get_optimal_parameters_rf_descriptors(df, logger)
+    get_cross_val_accuracy_rf_descriptors(df, 10, logger, optimal_parameters_rf_descs, split_dir)  
+
+    # random_forest - fingerprints
+    optimal_parameters_rf_fp = get_optimal_parameters_rf_fp(df_fp, logger)
+    get_cross_val_accuracy_rf_fp(df_fp, 10, logger, optimal_parameters_rf_fp, split_dir)   
 
     # xgboost - descriptors
-    #get_rmse_xgboost_descriptors(df, logger, n_fold, max_eval=128)
+    optimal_parameters_xgboost_descs = get_optimal_parameters_xgboost_descriptors(df, logger)
+    get_cross_val_accuracy_xgboost_descriptors(df, 10, logger, optimal_parameters_xgboost_descs, split_dir)  
 
     # xgboost - fingerprints
-    #get_rmse_xgboost_fp(df_fp, logger, n_fold)
+    optimal_parameters_xgboost_fp = get_optimal_parameters_xgboost_fp(df_fp, logger)
+    get_cross_val_accuracy_xgboost_fp(df_fp, 10, logger, optimal_parameters_xgboost_fp, split_dir) 

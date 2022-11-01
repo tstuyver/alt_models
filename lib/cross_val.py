@@ -70,7 +70,7 @@ def cross_val(df, model, n_folds, sample=None, split_dir=None):
 
     return rmse, mae
 
-def cross_val_fp(df_fp, model, n_folds, knn=False):
+def cross_val_fp(df_fp, model, n_folds, knn=False, split_dir=None):
     """
     Function to perform cross-validation with fingerprints
 
@@ -79,16 +79,28 @@ def cross_val_fp(df_fp, model, n_folds, knn=False):
         model (sklearn.Regressor): An initialized sklearn model
         n_folds (int): the number of folds
         knn (bool): whether the model is a KNN model
+        split_dir (str): the path to a directory containing data splits. If None, random splitting is performed.
 
     Returns:
         int: the obtained RMSE
     """
     rmse_list, mae_list = [], []
-    chunk_list = np.array_split(df_fp, n_folds)
+
+    if split_dir == None:
+        df_fp = df_fp.sample(frac=1, random_state=0)
+        chunk_list = np.array_split(df_fp, n_folds)
 
     for i in range(n_folds):
-        df_train = pd.concat([chunk_list[j] for j in range(n_folds) if j != i])
-        df_test = chunk_list[i]
+        if split_dir == None:
+            df_train = pd.concat([chunk_list[j] for j in range(n_folds) if j != i])
+            df_test = chunk_list[i]
+        else:
+            rxn_ids_train1 = pd.read_csv(os.path.join(split_dir, f'fold_{i}/train.csv'))[['rxn_id']].values.tolist()
+            rxn_ids_train2 = pd.read_csv(os.path.join(split_dir, f'fold_{i}/valid.csv'))[['rxn_id']].values.tolist()
+            rxn_ids_train = list(np.array(rxn_ids_train1 + rxn_ids_train2).reshape(-1))
+            df_fp['train'] = df_fp['rxn_id'].apply(lambda x: int(x) not in rxn_ids_train)
+            df_train = df_fp[df_fp['train'] == True]
+            df_test = df_fp[df_fp['train'] == False]
 
         y_train = df_train[['DG_TS']]
         y_test = df_test[['DG_TS']]
