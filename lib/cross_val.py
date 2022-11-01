@@ -2,9 +2,10 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.preprocessing import StandardScaler
+import os
 
 
-def cross_val(df, model, n_folds, sample=None):
+def cross_val(df, model, n_folds, sample=None, split_dir=None):
     """
     Function to perform cross-validation
 
@@ -13,20 +14,31 @@ def cross_val(df, model, n_folds, sample=None):
         model (sklearn.Regressor): An initialized sklearn model
         n_folds (int): the number of folds
         sample(int): the size of the subsample for the training set (default = None)
+        split_dir (str): the path to a directory containing data splits. If None, random splitting is performed.
 
     Returns:
         int: the obtained RMSE
     """
-    df = df.sample(frac=1, random_state=0)
     rmse_list, mae_list = [], []
-    chunk_list = np.array_split(df, n_folds)
-    feature_names = [column for column in df.columns if column not in['DG_TS','G_r']]
+    feature_names = [column for column in df.columns if column not in['rxn_id', 'DG_TS','G_r']]
+
+    if split_dir == None:
+        df = df.sample(frac=1, random_state=0)
+        chunk_list = np.array_split(df, n_folds)
 
     for i in range(n_folds):
-        df_train = pd.concat([chunk_list[j] for j in range(n_folds) if j != i])
-        if sample != None:
-            df_train = df_train.sample(n=sample)
-        df_test = chunk_list[i]
+        if split_dir == None:
+            df_train = pd.concat([chunk_list[j] for j in range(n_folds) if j != i])
+            if sample != None:
+                df_train = df_train.sample(n=sample)
+            df_test = chunk_list[i]
+        else:
+            rxn_ids_train1 = pd.read_csv(os.path.join(split_dir, f'fold_{i}/train.csv'))[['rxn_id']].values.tolist()
+            rxn_ids_train2 = pd.read_csv(os.path.join(split_dir, f'fold_{i}/valid.csv'))[['rxn_id']].values.tolist()
+            rxn_ids_train = list(np.array(rxn_ids_train1 + rxn_ids_train2).reshape(-1))
+            df['train'] = df['rxn_id'].apply(lambda x: int(x) not in rxn_ids_train)
+            df_train = df[df['train'] == True]
+            df_test = df[df['train'] == False]
 
         X_train, y_train = df_train[feature_names], df_train[['DG_TS']]
         X_test, y_test = df_test[feature_names], df_test[['DG_TS']]

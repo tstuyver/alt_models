@@ -52,7 +52,7 @@ def get_aromatic_list(smiles):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    targets = pd.read_csv(args.csv_file)[['smiles','DG_TS','G_r']]
+    targets = pd.read_csv(args.csv_file)[['rxn_id','smiles','DG_TS','G_r']]
     descriptors = pd.read_pickle(args.atom_descs_file)
     descriptors = descriptors.set_index('smiles')
     mol_descs = pd.read_pickle(args.reaction_descs_file)
@@ -75,8 +75,10 @@ if __name__ == '__main__':
     tmp_list_target1 = reactions['DG_TS'].values.tolist() 
     tmp_list_target2 = reactions['G_r'].values.tolist()
 
+    tmp_list_rxn_id = reactions['rxn_id'].values.tolist()
+
     for idx, reaction in enumerate(tmp_list):
-        rxn_desc_array = np.array([tmp_list_G[idx], tmp_list_G_alt1[idx], tmp_list_G_alt2[idx], tmp_list_target1[idx], tmp_list_target2[idx]])
+        rxn_desc_array = np.array([tmp_list_G[idx], tmp_list_G_alt1[idx], tmp_list_G_alt2[idx], tmp_list_rxn_id[idx], tmp_list_target1[idx], tmp_list_target2[idx]])
         reaction_feature_list.append(np.concatenate((np.concatenate([arr[:-1] for arr in reaction[0]]), rxn_desc_array)))
     
     columns_list = []
@@ -85,7 +87,7 @@ if __name__ == '__main__':
         for desc_name in ['partial_charge', 'fukui_elec', 'fukui_neu', 'nmr']:
             columns_list.append(f'{desc_name}_{i}') 
 
-    columns_list += ['G', 'G_alt1', 'G_alt2', 'DG_TS', 'G_r']
+    columns_list += ['G', 'G_alt1', 'G_alt2', 'rxn_id', 'DG_TS', 'G_r']
 
     print(len(reaction_feature_list[1]), len(columns_list))
 

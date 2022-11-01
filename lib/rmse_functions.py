@@ -13,7 +13,7 @@ from .k_nearest_neighbors import KNN
 
 def get_rmse_linear_regression(df, logger, n_fold):
     model = LinearRegression()
-    rmse, mae = cross_val(df, model, n_fold)
+    rmse, mae = cross_val(df, model, n_fold, split_dir='data_files/splits/')
 
     logger.info(f'{n_fold}-fold CV RMSE and MAE for linear regression: {rmse} {mae}')
 
