@@ -20,7 +20,7 @@ def cross_val(df, model, n_folds, sample=None, split_dir=None):
         int: the obtained RMSE
     """
     rmse_list, mae_list = [], []
-    feature_names = [column for column in df.columns if column not in['rxn_id', 'DG_TS','G_r']]
+    feature_names = [column for column in df.columns if column not in['rxn_id', 'DG_TS', 'G_r', 'train']]
 
     if split_dir == None:
         df = df.sample(frac=1, random_state=0)
@@ -36,7 +36,7 @@ def cross_val(df, model, n_folds, sample=None, split_dir=None):
             rxn_ids_train1 = pd.read_csv(os.path.join(split_dir, f'fold_{i}/train.csv'))[['rxn_id']].values.tolist()
             rxn_ids_train2 = pd.read_csv(os.path.join(split_dir, f'fold_{i}/valid.csv'))[['rxn_id']].values.tolist()
             rxn_ids_train = list(np.array(rxn_ids_train1 + rxn_ids_train2).reshape(-1))
-            df['train'] = df['rxn_id'].apply(lambda x: int(x) not in rxn_ids_train)
+            df['train'] = df['rxn_id'].apply(lambda x: int(x) in rxn_ids_train)
             df_train = df[df['train'] == True]
             df_test = df[df['train'] == False]
 
@@ -98,7 +98,7 @@ def cross_val_fp(df_fp, model, n_folds, knn=False, split_dir=None):
             rxn_ids_train1 = pd.read_csv(os.path.join(split_dir, f'fold_{i}/train.csv'))[['rxn_id']].values.tolist()
             rxn_ids_train2 = pd.read_csv(os.path.join(split_dir, f'fold_{i}/valid.csv'))[['rxn_id']].values.tolist()
             rxn_ids_train = list(np.array(rxn_ids_train1 + rxn_ids_train2).reshape(-1))
-            df_fp['train'] = df_fp['rxn_id'].apply(lambda x: int(x) not in rxn_ids_train)
+            df_fp['train'] = df_fp['rxn_id'].apply(lambda x: int(x) in rxn_ids_train)
             df_train = df_fp[df_fp['train'] == True]
             df_test = df_fp[df_fp['train'] == False]
 
@@ -139,7 +139,5 @@ def cross_val_fp(df_fp, model, n_folds, knn=False, split_dir=None):
 
     rmse = np.mean(np.array(rmse_list))
     mae = np.mean(np.array(mae_list))
-
-    print(rmse, mae)
 
     return rmse, mae 

@@ -78,5 +78,4 @@ def get_df_fingerprints(df, rad, nbits):
     df['fingerprint'] = df['smiles'].apply(lambda x: 
             get_difference_fingerprint(x, rad, nbits))
 
-    print(df['fingerprint'].head())
     return df[['rxn_id', 'fingerprint','DG_TS']]

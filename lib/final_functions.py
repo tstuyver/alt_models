@@ -40,11 +40,11 @@ def get_optimal_parameters_xgboost_descriptors(df, logger, max_eval=32):
         Dict: a dictionary containing the optimal parameters
     """
     space = {
-        'max_depth': hp.quniform('max_depth', low=1, high=6, q=1),
-        'gamma': hp.loguniform('gamma', low=0.0, high=10),
-        'reg_alpha': hp.uniform('reg_alpha', low=0.0, high=100),
-        'reg_lambda': hp.uniform('reg_lambda', low=0.0, high=1.0),
-        'n_estimators': hp.quniform('n_estimators', low=10, high=300, q=1)
+        'max_depth': hp.quniform('max_depth', low=2, high=10, q=1),
+        'gamma': hp.qloguniform('gamma', low=0.0, high=6.0, q=2.0),
+        'n_estimators': hp.quniform('n_estimators', low=100, high=800, q=100),
+        'learning_rate': hp.quniform('learning_rate', low=0.05, high=0.20, q=0.05),
+        'min_child_weight': hp.quniform('min_child_weight', low=2, high=10, q=2.0)
     }
     optimal_parameters = bayesian_opt(df, space, objective_xgboost, XGBRegressor, max_eval=max_eval)
     logger.info(f'Optimal parameters for xgboost -- descriptors: {optimal_parameters}')
@@ -65,9 +65,9 @@ def get_cross_val_accuracy_xgboost_descriptors(df, logger, n_fold, parameters, s
     """
     model = XGBRegressor(max_depth=int(parameters['max_depth']), 
                         gamma=parameters['gamma'], 
-                        reg_alpha=parameters['reg_alpha'],
-                        reg_lambda=parameters['reg_lambda'], 
-                        n_estimators=int(parameters['n_estimators']))
+                        n_estimators=int(parameters['n_estimators']),
+                        learning_rate=parameters['learning_rate'],
+                        min_child_weight=parameters['min_child_weight'])
     rmse, mae = cross_val(df, model, n_fold, split_dir=split_dir)
     logger.info(f'{n_fold}-fold CV RMSE and MAE for xgboost -- descriptors: {rmse} {mae}')
     logger.info(f'Parameters used: {parameters}')
@@ -86,11 +86,11 @@ def get_optimal_parameters_xgboost_fp(df_fp, logger, max_eval=32):
         Dict: a dictionary containing the optimal parameters
     """
     space = {
-        'max_depth': hp.quniform('max_depth', low=1, high=6, q=1),
-        'gamma': hp.loguniform('gamma', low=0.0, high=10),
-        'reg_alpha': hp.uniform('reg_alpha', low=0.0, high=100),
-        'reg_lambda': hp.uniform('reg_lambda', low=0.0, high=1.0),
-        'n_estimators': hp.quniform('n_estimators', low=10, high=300, q=1)
+        'max_depth': hp.quniform('max_depth', low=2, high=10, q=1),
+        'gamma': hp.qloguniform('gamma', low=0.0, high=6.0, q=2.0),
+        'n_estimators': hp.quniform('n_estimators', low=100, high=800, q=100),
+        'learning_rate': hp.quniform('learning_rate', low=0.05, high=0.20, q=0.05),
+        'min_child_weight': hp.quniform('min_child_weight', low=2, high=10, q=2.0)
     }
     optimal_parameters = bayesian_opt(df_fp, space, objective_xgboost_fp, XGBRegressor, max_eval=max_eval)
     logger.info(f'Optimal parameters for xgboost -- fingerprints: {optimal_parameters}')
@@ -111,10 +111,10 @@ def get_cross_val_accuracy_xgboost_fp(df_fp, logger, n_fold, parameters, split_d
     """
     model = XGBRegressor(max_depth=int(parameters['max_depth']), 
                         gamma=parameters['gamma'], 
-                        reg_alpha=parameters['reg_alpha'],
-                        reg_lambda=parameters['reg_lambda'], 
-                        n_estimators=int(parameters['n_estimators']))
-    rmse, mae = cross_val(df_fp, model, n_fold, split_dir=split_dir)
+                        n_estimators=int(parameters['n_estimators']),
+                        learning_rate=parameters['learning_rate'],
+                        min_child_weight=parameters['min_child_weight'])
+    rmse, mae = cross_val_fp(df_fp, model, n_fold, split_dir=split_dir)
     logger.info(f'{n_fold}-fold CV RMSE and MAE for xgboost -- fingerprints: {rmse} {mae}')
     logger.info(f'Parameters used: {parameters}')
 
@@ -175,8 +175,9 @@ def get_optimal_parameters_rf_descriptors(df, logger, max_eval=32):
         Dict: a dictionary containing the optimal parameters
     """
     space = {
-        'n_estimators': hp.quniform('n_estimators', low=1, high=300, q=1),
-        'max_features': hp.quniform('max_features', low=0.1, high=1, q=0.1)
+        'n_estimators': hp.choice('n_estimators', [10, 30, 50, 100, 150, 200, 300, 400, 600]),
+        'max_features': hp.quniform('max_features', low=0.1, high=1, q=0.1),
+        'min_samples_leaf': hp.choice('min_samples_leaf', [1, 2, 5, 10, 20, 50])
     }
     optimal_parameters = bayesian_opt(df, space, objective_rf, RandomForestRegressor, max_eval=max_eval)
     logger.info(f'Optimal parameters for RF -- descriptors: {optimal_parameters}')
@@ -196,7 +197,7 @@ def get_cross_val_accuracy_rf_descriptors(df, logger, n_fold, parameters, split_
         split_dir (str, optional): path to the directory containing the splits. Defaults to None.
     """
     model = RandomForestRegressor(n_estimators=int(parameters['n_estimators']), 
-            max_features=parameters['max_features'])
+            max_features=parameters['max_features'], min_samples_leaf=int(parameters['min_samples_leaf']))
     rmse, mae = cross_val(df, model, n_fold, split_dir=split_dir)
     logger.info(f'{n_fold}-fold CV RMSE and MAE for RF -- descriptors: {rmse} {mae}')
     logger.info(f'Parameters used: {parameters}')
@@ -215,8 +216,9 @@ def get_optimal_parameters_rf_fp(df_fp, logger, max_eval=32):
         Dict: a dictionary containing the optimal parameters
     """
     space = {
-        'n_estimators': hp.quniform('n_estimators', low=1, high=300, q=1),
-        'max_features': hp.quniform('max_features', low=0.1, high=1, q=0.1)
+        'n_estimators': hp.choice('n_estimators', [10, 30, 50, 100, 150, 200, 300, 400, 600]),
+        'max_features': hp.quniform('max_features', low=0.1, high=1, q=0.1),
+        'min_samples_leaf': hp.choice('min_samples_leaf', [1, 2, 5, 10, 20, 50])
     }
     optimal_parameters = bayesian_opt(df_fp, space, objective_rf_fp, RandomForestRegressor, max_eval=max_eval)
     logger.info(f'Optimal parameters for RF -- fingerprints: {optimal_parameters}')
@@ -235,8 +237,10 @@ def get_cross_val_accuracy_rf_fp(df_fp, logger, n_fold, parameters, split_dir=No
         parameters (Dict): a dictionary containing the parameters to be used
         split_dir (str, optional): path to the directory containing the splits. Defaults to None.
     """
-    model = RandomForestRegressor(n_estimators=int(parameters['n_estimators']), max_features=parameters['max_features'])
-    rmse, mae = cross_val(df_fp, model, n_fold, split_dir=split_dir)
+    model = RandomForestRegressor(n_estimators=int(parameters['n_estimators']), 
+                                max_features=parameters['max_features'], 
+                                min_samples_leaf=int(parameters['min_samples_leaf']))
+    rmse, mae = cross_val_fp(df_fp, model, n_fold, split_dir=split_dir)
     logger.info(f'{n_fold}-fold CV RMSE and MAE for RF -- fingerprints: {rmse} {mae}')
     logger.info(f'Parameters used: {parameters}')
 

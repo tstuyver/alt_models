@@ -31,28 +31,28 @@ if __name__ == '__main__':
     split_dir = args.split_dir
 
     df_fp = get_df_fingerprints(df_rxn_smiles,2,2048)
-    df_fp_knn = get_df_fingerprints_rp(df_rxn_smiles,2,2048)
+    #df_fp_knn = get_df_fingerprints_rp(df_rxn_smiles,2,2048)
 
     # linear regression
     #get_cross_val_accuracy_linear_regression(df, logger, n_fold, split_dir)
 
     # KNN - fingerprints
-    #optimal_parameters_knn = get_optimal_parameters_knn_fp(df_fp_knn, logger)
-    optimal_parameters_knn = {'lam': 0.4, 'mu': 0.1, 'n': 4.0}
-    get_cross_val_accuracy_knn_fp(df_fp_knn, logger, 10, optimal_parameters_knn, split_dir)
+    #optimal_parameters_knn = get_optimal_parameters_knn_fp(df_fp_knn, logger, max_eval=64)
+    #optimal_parameters_knn = {'lam': 0.30000000000000004, 'mu': 0.1, 'n': 4.0}
+    #get_cross_val_accuracy_knn_fp(df_fp_knn, logger, 10, optimal_parameters_knn, split_dir)
 
     # random forest - descriptors
-    optimal_parameters_rf_descs = get_optimal_parameters_rf_descriptors(df, logger)
-    get_cross_val_accuracy_rf_descriptors(df, 10, logger, optimal_parameters_rf_descs, split_dir)  
+    optimal_parameters_rf_descs = get_optimal_parameters_rf_descriptors(df, logger, max_eval=64)
+    get_cross_val_accuracy_rf_descriptors(df, logger, 10, optimal_parameters_rf_descs, split_dir)  
 
     # random_forest - fingerprints
-    optimal_parameters_rf_fp = get_optimal_parameters_rf_fp(df_fp, logger)
-    get_cross_val_accuracy_rf_fp(df_fp, 10, logger, optimal_parameters_rf_fp, split_dir)   
+    optimal_parameters_rf_fp = get_optimal_parameters_rf_fp(df_fp, logger, max_eval=64)
+    get_cross_val_accuracy_rf_fp(df_fp, logger, 10, optimal_parameters_rf_fp, split_dir)   
 
     # xgboost - descriptors
-    optimal_parameters_xgboost_descs = get_optimal_parameters_xgboost_descriptors(df, logger)
-    get_cross_val_accuracy_xgboost_descriptors(df, 10, logger, optimal_parameters_xgboost_descs, split_dir)  
+    optimal_parameters_xgboost_descs = get_optimal_parameters_xgboost_descriptors(df, logger, max_eval=128)
+    get_cross_val_accuracy_xgboost_descriptors(df, logger, 10, optimal_parameters_xgboost_descs, split_dir)  
 
     # xgboost - fingerprints
-    optimal_parameters_xgboost_fp = get_optimal_parameters_xgboost_fp(df_fp, logger)
-    get_cross_val_accuracy_xgboost_fp(df_fp, 10, logger, optimal_parameters_xgboost_fp, split_dir) 
+    #optimal_parameters_xgboost_fp = get_optimal_parameters_xgboost_fp(df_fp, logger, max_eval=128)
+    #get_cross_val_accuracy_xgboost_fp(df_fp, logger, 10, optimal_parameters_xgboost_fp, split_dir) 

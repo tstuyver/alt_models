@@ -1,10 +1,7 @@
 from types import SimpleNamespace
-from rdkit.Chem import AllChem
-from rdkit import Chem
 from .cross_val import cross_val, cross_val_fp   
 from hyperopt import fmin, tpe
 from functools import partial
-import numpy as np
 
 
 def bayesian_opt(df, space, objective, model_class, n_train=0.8, max_eval=32):
@@ -44,6 +41,7 @@ def objective_rf_fp(args_dict, data, model_class):
     args = SimpleNamespace(**args_dict)
     estimator = model_class(n_estimators=int(args.n_estimators), 
                                     max_features=args.max_features,
+                                    min_samples_leaf=int(args.min_samples_leaf),
                                     random_state=2)
     cval,_ = cross_val_fp(data, estimator, 4)
 
@@ -64,8 +62,9 @@ def objective_rf(args_dict, data, model_class):
     """
     args = SimpleNamespace(**args_dict)
     estimator = model_class(n_estimators=int(args.n_estimators), 
-                                    max_features=args.max_features,
-                                    random_state=2)
+                                max_features=args.max_features,
+                                min_samples_leaf=int(args.min_samples_leaf),
+                                random_state=2)
     cval,_ = cross_val(data, estimator, 4)
 
 
@@ -87,8 +86,8 @@ def objective_xgboost(args_dict, data, model_class):
     args = SimpleNamespace(**args_dict)
     estimator = model_class(max_depth=int(args.max_depth), 
                                     gamma=args.gamma,
-                                    reg_alpha=args.reg_alpha,
-                                    reg_lambda=args.reg_lambda,
+                                    learning_rate=args.learning_rate,
+                                    min_child_weight=args.min_child_weight,
                                     n_estimators=int(args.n_estimators))
     cval,_ = cross_val(data, estimator, 4)
 
@@ -110,8 +109,8 @@ def objective_xgboost_fp(args_dict, data, model_class):
     args = SimpleNamespace(**args_dict)
     estimator = model_class(max_depth=int(args.max_depth), 
                                     gamma=args.gamma,
-                                    reg_alpha=args.reg_alpha,
-                                    reg_lambda=args.reg_lambda,
+                                    learning_rate=args.learning_rate,
+                                    min_child_weight=args.min_child_weight,
                                     n_estimators=int(args.n_estimators))
     cval,_ = cross_val_fp(data, estimator, 4)
 
